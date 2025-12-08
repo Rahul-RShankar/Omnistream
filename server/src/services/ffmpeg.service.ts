@@ -1,5 +1,5 @@
 import ffmpeg from 'fluent-ffmpeg';
-import { config } from '../config';
+import { config } from '../config.ts';
 
 // Ensure ffmpeg path is set if not in PATH
 // ffmpeg.setFfmpegPath(config.ffmpegPath);

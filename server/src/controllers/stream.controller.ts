@@ -1,5 +1,4 @@
-import { Request, Response } from 'express';
-import { ffmpegService } from '../services/ffmpeg.service';
+import { ffmpegService } from '../services/ffmpeg.service.ts';
 
 export const streamController = {
   // Fix: Using any for req/res to avoid type errors with Express types in this environment

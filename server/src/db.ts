@@ -1,4 +1,5 @@
 
+
 // import { PrismaClient } from '@prisma/client';
 
 // export const prisma = new PrismaClient();
@@ -27,6 +28,9 @@ export const prisma = {
         id: `acc_${Date.now()}`, 
         ...args.data 
       };
+    },
+    findMany: async (args: any) => {
+      return [];
     }
   }
 };

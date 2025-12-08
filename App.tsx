@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ProfilePanel } from './components/ProfilePanel';
@@ -8,7 +7,7 @@ import { AddSourceModal } from './components/AddSourceModal';
 import { ConnectAccountModal } from './components/ConnectAccountModal';
 import { SourcePropertiesModal } from './components/SourcePropertiesModal';
 import { DestinationsView, AccountsView, AnalyticsView, SettingsView, PlaceholderView } from './components/Views';
-import { INITIAL_ACCOUNTS, INITIAL_SCENES } from './constants';
+import { INITIAL_SCENES } from './constants';
 import { Account, Scene, StreamState, StreamMetrics, PlatformType, Source } from './types';
 import { Modal } from './components/ui/Modal';
 import { Button } from './components/ui/Button';
@@ -17,8 +16,11 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [accounts, setAccounts] = useState<Account[]>(INITIAL_ACCOUNTS);
-  const [activeAccountId, setActiveAccountId] = useState<string>(INITIAL_ACCOUNTS[0].id);
+  
+  // Start with empty accounts, will fetch from DB
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [activeAccountId, setActiveAccountId] = useState<string>('');
+  
   const [scenes, setScenes] = useState<Scene[]>(INITIAL_SCENES);
   const [activeSceneId, setActiveSceneId] = useState<string>(INITIAL_SCENES[0].id);
   const [streamState, setStreamState] = useState<StreamState>(StreamState.IDLE);
@@ -52,8 +54,9 @@ export default function App() {
   const activeAccount = accounts.find(a => a.id === activeAccountId) || null;
   const currentScene = scenes.find(s => s.id === activeSceneId) || null;
 
-  // Check Backend Connection
+  // Initial Fetch: Backend connection & Accounts
   useEffect(() => {
+    // 1. Check health
     fetch('/api/health')
       .then(res => res.json())
       .then(data => {
@@ -61,9 +64,39 @@ export default function App() {
         setIsBackendConnected(true);
       })
       .catch(err => {
-        console.warn("Backend not connected (running in client-only mode):", err);
+        console.warn("Backend not connected:", err);
       });
+
+    // 2. Fetch Accounts
+    fetchAccounts();
+
+    // 3. Listen for Auth Success Message from Popup
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'AUTH_SUCCESS') {
+        console.log('Auth Success:', event.data.account);
+        fetchAccounts(); // Refresh list
+        setIsConnectAccountModalOpen(false);
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+
+    return () => window.removeEventListener('message', handleAuthMessage);
   }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch('/api/accounts');
+      if (res.ok) {
+        const data = await res.json();
+        setAccounts(data);
+        if (data.length > 0 && !activeAccountId) {
+          setActiveAccountId(data[0].id);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch accounts", e);
+    }
+  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -71,7 +104,7 @@ export default function App() {
       interval = setInterval(() => {
         setMetrics(prev => ({
           ...prev,
-          bitrate: 4500 + Math.random() * 500, // fluctuate between 4500-5000
+          bitrate: 4500 + Math.random() * 500,
           cpuUsage: 15 + Math.random() * 5,
           viewers: prev.viewers + (Math.random() > 0.7 ? 1 : 0),
           duration: prev.duration + 1
@@ -88,12 +121,9 @@ export default function App() {
   // Hotkey Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') {
         return;
       }
-
-      // Find source with this hotkey
       scenes.forEach(scene => {
         scene.sources.forEach(source => {
           if (source.hotkey === e.code) {
@@ -110,11 +140,9 @@ export default function App() {
   const handleStreamToggle = () => {
     if (streamState === StreamState.LIVE) {
       setStreamState(StreamState.ENDING);
-      // In a real app, call /api/stream/stop here
       setTimeout(() => setStreamState(StreamState.IDLE), 1000);
     } else {
       setStreamState(StreamState.STARTING);
-      // In a real app, call /api/stream/start here
       setTimeout(() => setStreamState(StreamState.LIVE), 1000);
     }
   };
@@ -138,7 +166,6 @@ export default function App() {
 
   const handleAddScene = () => {
     if (!newSceneName.trim()) return;
-    
     const newScene: Scene = {
       id: generateId(),
       name: newSceneName,
@@ -150,14 +177,10 @@ export default function App() {
   };
 
   const handleRemoveScene = (sceneId: string) => {
-    if (scenes.length <= 1) {
-      return;
-    }
+    if (scenes.length <= 1) return;
     const newScenes = scenes.filter(s => s.id !== sceneId);
     setScenes(newScenes);
-    if (activeSceneId === sceneId) {
-      setActiveSceneId(newScenes[0].id);
-    }
+    if (activeSceneId === sceneId) setActiveSceneId(newScenes[0].id);
   };
 
   const handleMoveScene = (sceneId: string, direction: 'up' | 'down') => {
@@ -166,7 +189,6 @@ export default function App() {
       if (idx === -1) return prev;
       const newScenes = [...prev];
       const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      
       if (swapIdx >= 0 && swapIdx < newScenes.length) {
         [newScenes[idx], newScenes[swapIdx]] = [newScenes[swapIdx], newScenes[idx]];
       }
@@ -176,30 +198,17 @@ export default function App() {
 
   const handleAddSource = (sourceData: any) => {
     if (!currentScene) return;
-    
     const newSource: Source = {
       ...sourceData,
       id: generateId(),
       visible: true,
-      config: {
-        ...sourceData.config,
-        muted: false,
-        volume: 100
-      },
-      filters: {
-        noiseSuppression: true,
-        echoCancellation: true,
-        gain: 0,
-        compressor: false
-      }
+      config: { ...sourceData.config, muted: false, volume: 100 },
+      filters: { noiseSuppression: true, echoCancellation: true, gain: 0, compressor: false }
     };
 
     setScenes(prev => prev.map(scene => {
       if (scene.id === currentScene.id) {
-        return {
-          ...scene,
-          sources: [newSource, ...scene.sources] // Add to top
-        };
+        return { ...scene, sources: [newSource, ...scene.sources] };
       }
       return scene;
     }));
@@ -208,10 +217,7 @@ export default function App() {
   const handleRemoveSource = (sceneId: string, sourceId: string) => {
     setScenes(prev => prev.map(scene => {
       if (scene.id === sceneId) {
-        return {
-          ...scene,
-          sources: scene.sources.filter(s => s.id !== sourceId)
-        };
+        return { ...scene, sources: scene.sources.filter(s => s.id !== sourceId) };
       }
       return scene;
     }));
@@ -224,7 +230,6 @@ export default function App() {
         if (idx === -1) return scene;
         const newSources = [...scene.sources];
         const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-        
         if (swapIdx >= 0 && swapIdx < newSources.length) {
           [newSources[idx], newSources[swapIdx]] = [newSources[swapIdx], newSources[idx]];
         }
@@ -248,10 +253,7 @@ export default function App() {
           ...scene,
           sources: scene.sources.map(s => {
             if (s.id === sourceId) {
-              return {
-                 ...s,
-                 config: { ...s.config, muted: !s.config.muted }
-              };
+              return { ...s, config: { ...s.config, muted: !s.config.muted } };
             }
             return s;
           })
@@ -268,10 +270,7 @@ export default function App() {
           ...scene,
           sources: scene.sources.map(s => {
             if (s.id === sourceId) {
-              return {
-                 ...s,
-                 visible: !s.visible
-              };
+              return { ...s, visible: !s.visible };
             }
             return s;
           })
@@ -281,36 +280,44 @@ export default function App() {
     }));
   };
 
-  const handleConnectAccount = (platform: PlatformType, data?: any) => {
-    let username = 'User';
-    let avatarUrl = `https://picsum.photos/seed/${Math.random()}/100`;
-
-    switch (platform) {
-      case 'youtube': username = 'YouTube Creator'; break;
-      case 'twitch': username = 'TwitchStreamer'; break;
-      case 'facebook': username = 'FB User'; break;
-      case 'instagram': username = 'Insta_Star'; break;
-      case 'tiktok': username = 'TikToker_99'; break;
-      case 'x': username = 'XUser'; break;
-      case 'custom_rtmp': 
-        username = data?.name || 'Custom Server'; 
-        avatarUrl = 'https://ui-avatars.com/api/?name=RTMP&background=random';
-        break;
+  // Triggers OAuth Flow
+  const handleConnectAccount = async (platform: PlatformType, data?: any) => {
+    if (platform === 'custom_rtmp') {
+      // Manual add
+      setAccounts(prev => [...prev, {
+        id: generateId(),
+        platform,
+        username: data?.name || 'Custom Server',
+        avatarUrl: 'https://ui-avatars.com/api/?name=RTMP&background=random',
+        status: 'connected',
+        isDestination: true,
+        isSource: true,
+        rtmpUrl: data.url, 
+        streamKey: data.key 
+      }]);
+      return;
     }
 
-    const newAccount: Account = {
-      id: generateId(),
-      platform,
-      username,
-      avatarUrl,
-      status: 'connected',
-      isDestination: true,
-      isSource: true,
-      ...(platform === 'custom_rtmp' ? { rtmpUrl: data.url, streamKey: data.key } : {})
-    };
-
-    setAccounts(prev => [...prev, newAccount]);
-    setActiveAccountId(newAccount.id);
+    try {
+      // Get the Auth URL from backend
+      const res = await fetch(`/api/auth/${platform}/url`);
+      const { url } = await res.json();
+      
+      // Open Popup
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      
+      window.open(
+        url, 
+        'StreamForgeAuth', 
+        `toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=${width}, height=${height}, top=${top}, left=${left}`
+      );
+    } catch (error) {
+      console.error("Failed to start auth flow", error);
+      alert("Could not connect to authentication server.");
+    }
   };
 
   const renderContent = () => {
@@ -393,7 +400,6 @@ export default function App() {
         onUpdate={handleUpdateSource}
       />
 
-      {/* Add Scene Modal */}
       <Modal 
         isOpen={isAddSceneModalOpen} 
         onClose={() => setIsAddSceneModalOpen(false)}

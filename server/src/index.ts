@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { router } from './routes';
-import { config } from './config';
+import { router } from './routes.ts';
+import { config } from './config.ts';
 
 const app = express();
 const httpServer = createServer(app);
