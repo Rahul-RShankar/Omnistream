@@ -31,6 +31,15 @@ export const prisma = {
     },
     findMany: async (args: any) => {
       return [];
+    },
+    update: async (args: any) => {
+      return {
+        id: args.where.id,
+        ...args.data
+      };
+    },
+    delete: async (args: any) => {
+      return { id: args.where.id };
     }
   }
 };

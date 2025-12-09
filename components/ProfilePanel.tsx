@@ -20,6 +20,8 @@ interface ProfilePanelProps {
   streamState: StreamState;
   onSwitchAccount: (accountId: string) => void;
   onAddAccount: () => void;
+  onLogout: () => void;
+  onSettings: () => void;
 }
 
 export const ProfilePanel: React.FC<ProfilePanelProps> = ({ 
@@ -27,7 +29,9 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   accounts, 
   streamState,
   onSwitchAccount,
-  onAddAccount
+  onAddAccount,
+  onLogout,
+  onSettings
 }) => {
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -61,10 +65,10 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         </div>
         
         <div className="grid grid-cols-2 gap-2">
-           <Button size="sm" variant="secondary" className="w-full text-xs">
-             <Settings size={14} className="mr-2" /> Edit
+           <Button size="sm" variant="secondary" className="w-full text-xs" onClick={onSettings}>
+             <Settings size={14} className="mr-2" /> Settings
            </Button>
-           <Button size="sm" variant="secondary" className="w-full text-xs">
+           <Button size="sm" variant="secondary" className="w-full text-xs" onClick={onLogout}>
              <LogOut size={14} className="mr-2" /> Logout
            </Button>
         </div>

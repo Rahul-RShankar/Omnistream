@@ -89,7 +89,7 @@ export const DestinationsView: React.FC<ViewProps> = () => {
   );
 };
 
-export const AccountsView: React.FC<{ accounts: Account[]; onAddAccount: () => void }> = ({ accounts, onAddAccount }) => {
+export const AccountsView: React.FC<{ accounts: Account[]; onAddAccount: () => void; onRemoveAccount: (id: string) => void }> = ({ accounts, onAddAccount, onRemoveAccount }) => {
   return (
     <ViewContainer title="Connected Accounts" subtitle="Manage authentication for sources and destinations.">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -98,13 +98,14 @@ export const AccountsView: React.FC<{ accounts: Account[]; onAddAccount: () => v
             <div className="absolute top-0 right-0 p-4 opacity-50">
               {account.platform === 'youtube' && <Globe size={64} className="text-zinc-800" />}
               {account.platform === 'twitch' && <Zap size={64} className="text-zinc-800" />}
+              {account.platform === 'facebook' && <div className="text-blue-500"><Zap size={64} /></div>}
             </div>
             
             <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center mb-4">
-                <img src={account.avatarUrl} alt="" className="w-12 h-12 rounded-full border-2 border-zinc-800" />
-                <div className="ml-3">
-                  <h3 className="font-bold text-white">{account.username}</h3>
+                <img src={account.avatarUrl || "https://picsum.photos/100"} alt="" className="w-12 h-12 rounded-full border-2 border-zinc-800" />
+                <div className="ml-3 overflow-hidden">
+                  <h3 className="font-bold text-white truncate">{account.username}</h3>
                   <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{account.platform}</span>
                 </div>
               </div>
@@ -116,7 +117,14 @@ export const AccountsView: React.FC<{ accounts: Account[]; onAddAccount: () => v
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button size="sm" variant="secondary" className="w-full">Refresh</Button>
-                  <Button size="sm" variant="outline" className="w-full text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/10">Unlink</Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full text-red-400 hover:text-red-300 border-red-900/30 hover:bg-red-900/10"
+                    onClick={() => onRemoveAccount(account.id)}
+                  >
+                    Unlink
+                  </Button>
                 </div>
               </div>
             </div>

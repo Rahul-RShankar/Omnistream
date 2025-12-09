@@ -1,30 +1,48 @@
 import { ffmpegService } from '../services/ffmpeg.service.ts';
 
 export const streamController = {
-  // Fix: Using any for req/res to avoid type errors with Express types in this environment
   async startStream(req: any, res: any) {
-    const { sourceUrl, destinations } = req.body;
+    const { sourceUrl, destinations, mode } = req.body;
     
-    if (!sourceUrl || !destinations || destinations.length === 0) {
-      return res.status(400).json({ error: 'Invalid stream config' });
+    if (!destinations || !Array.isArray(destinations) || destinations.length === 0) {
+      return res.status(400).json({ error: 'At least one destination is required' });
     }
 
     try {
-      // In a real app, we track the process ID to stop it later
-      ffmpegService.startStreamRelay(sourceUrl, destinations);
-      res.json({ success: true, message: 'Stream started' });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to start stream' });
+      if (mode === 'ingest') {
+        // Start waiting for socket data
+        ffmpegService.startStreamIngest(destinations);
+        return res.json({ 
+          success: true, 
+          message: 'Ingest server ready. Please start sending data via socket.',
+          mode: 'ingest'
+        });
+      } else {
+        // Default Relay Mode
+        if (!sourceUrl) return res.status(400).json({ error: 'Source URL required for relay mode' });
+        
+        ffmpegService.startStreamRelay(sourceUrl, destinations);
+        return res.json({ 
+          success: true, 
+          message: `Relay started to ${destinations.length} destinations`,
+          mode: 'relay'
+        });
+      }
+    } catch (error: any) {
+      console.error("Stream Start Error:", error);
+      return res.status(500).json({ success: false, error: 'Failed to start stream', details: error.message });
     }
   },
 
-  // Fix: Using any for req/res to avoid type errors with Express types in this environment
   async stopStream(req: any, res: any) {
-    // Logic to kill the ffmpeg process
-    res.json({ success: true, message: 'Stream stopped' });
+    try {
+      const wasRunning = ffmpegService.stopStream();
+      return res.json({ success: true, message: wasRunning ? 'Stream stopped' : 'No stream running' });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, error: 'Failed to stop stream', details: error.message });
+    }
   },
 
-  // Fix: Using any for req/res to avoid type errors with Express types in this environment
   async getIngestConfig(req: any, res: any) {
     res.json({
       rtmpUrl: 'rtmp://ingest.streamforge.com/live',
