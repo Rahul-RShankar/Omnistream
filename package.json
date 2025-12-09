@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"nodemon --watch server --exec ts-node --esm --experimental-specifier-resolution=node server/src/index.ts\"", 
+    "dev": "concurrently \"vite\" \"nodemon --watch server --exec node --loader ts-node/esm server/src/index.ts\"", 
 
     "build": "vite build && tsc -p server",
     "start": "node dist/server/index.js",
