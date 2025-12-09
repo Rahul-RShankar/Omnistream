@@ -1,4 +1,4 @@
-# StreamForge Studio
+# Omnistream Studio
 
 A professional multi-account, multi-source streaming platform allowing composition of local files, remote URLs, and devices with comprehensive studio controls.
 
