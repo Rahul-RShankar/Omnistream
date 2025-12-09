@@ -1,0 +1,11 @@
+#  render.yaml snippet for  Node.js service
+services:
+  - type: web
+    name: OmniStream
+    env: node
+    buildCommand: |
+      apt-get update
+      apt-get install -y ffmpeg python3 python3-pip # Install Python and pip
+      pip install yt-dlp
+      npm install # or yarn install
+    startCommand: npm run dev
