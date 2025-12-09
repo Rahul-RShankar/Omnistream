@@ -6,7 +6,7 @@ A professional multi-account, multi-source streaming platform allowing compositi
 
 1.  **Node.js**: v18 or higher.
 2.  **PostgreSQL**: Local instance or cloud connection string.
-3.  **FFmpeg**: Installed on your system and available in the system PATH.
+3.  **FFmpeg** & **yt-dlp**: Installed on your system and available in the system PATH.
 
 ## Installation
 
